@@ -1,5 +1,6 @@
 import sys
 from pathlib import Path
+import os
 
 # Add parent directory to Python path
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -28,13 +29,28 @@ app = FastAPI(
     redoc_url="/redoc"
 )
 
-# Configure CORS
+# Configure CORS for production
+allowed_origins = [
+    "http://localhost:3000",
+    "http://localhost:3001",
+    "https://*.vercel.app",  # All Vercel preview deployments
+    os.getenv("FRONTEND_URL", ""),  # Production frontend URL from environment variable
+]
+
+# If FRONTEND_URL is set, add it explicitly
+if os.getenv("FRONTEND_URL"):
+    allowed_origins.append(os.getenv("FRONTEND_URL"))
+
+# Filter out empty strings
+allowed_origins = [origin for origin in allowed_origins if origin]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.ALLOWED_ORIGINS,
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 
 # Include routes with prefix
@@ -46,6 +62,10 @@ async def startup_event():
     logger.info("=" * 50)
     logger.info("Starting Vanna AI API...")
     logger.info("=" * 50)
+    
+    # Log CORS configuration
+    logger.info("CORS Configuration:")
+    logger.info(f"Allowed Origins: {allowed_origins}")
     
     # Test database connection
     logger.info("Testing database connection...")
@@ -80,11 +100,20 @@ async def root():
         }
     }
 
+@app.get("/health")
+async def health_check():
+    """Health check endpoint for Railway"""
+    return {
+        "status": "healthy",
+        "service": "vanna-ai-api"
+    }
+
 if __name__ == "__main__":
     import uvicorn
+    port = int(os.getenv("PORT", settings.PORT))
     uvicorn.run(
         "src.main:app",
-        host=settings.HOST,
-        port=settings.PORT,
+        host="0.0.0.0",  # Changed to 0.0.0.0 for Railway
+        port=port,
         reload=settings.DEBUG
     )
