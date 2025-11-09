@@ -155,14 +155,54 @@ CRITICAL Rules:
 - End with semicolon
 
 ADVANCED SQL PATTERNS:
-- For moving averages/window functions: Use CTEs (WITH clause) to first aggregate, then apply window functions
-- Window function syntax: FUNCTION() OVER (PARTITION BY col ORDER BY col ROWS BETWEEN...)
-- For growth rates: MUST use CTE pattern:
+
+RUNNING TOTALS / CUMULATIVE SUMS:
+- Use SUM() OVER (ORDER BY date_column ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)
+- Example: SELECT 
+    "invoiceDate",
+    "invoiceTotal",
+    SUM("invoiceTotal") OVER (ORDER BY "invoiceDate" ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS running_total
+  FROM "summaries" s
+  JOIN "invoices" i ON s."documentId" = i."documentId"
+  ORDER BY "invoiceDate"
+
+MOVING AVERAGES:
+- Use AVG() OVER (ORDER BY date ROWS BETWEEN N PRECEDING AND CURRENT ROW)
+- Example for 3-month moving average:
+  AVG("invoiceTotal") OVER (ORDER BY month ROWS BETWEEN 2 PRECEDING AND CURRENT ROW) AS moving_avg_3m
+
+GROWTH RATES / PERIOD-OVER-PERIOD:
+- MUST use CTE pattern (CRITICAL):
   * Step 1: CTE aggregates data (WITH monthly_data AS (SELECT month, SUM(amount) FROM ... GROUP BY month))
   * Step 2: Apply LAG() on the aggregated results (SELECT *, LAG(amount) OVER (ORDER BY month) FROM monthly_data)
   * Step 3: Calculate percentage: (current - previous) / previous * 100
   * CRITICAL: Never use LAG(SUM(...)) - aggregate first in CTE, then LAG on aggregated column
-- Example CTE: WITH monthly_data AS (SELECT ...) SELECT ... FROM monthly_data
+- Example CTE: 
+  WITH monthly_totals AS (
+    SELECT 
+      DATE_TRUNC('month', i."invoiceDate") AS month,
+      SUM(s."invoiceTotal") AS total
+    FROM "invoices" i
+    JOIN "summaries" s ON i."documentId" = s."documentId"
+    WHERE i."invoiceDate" IS NOT NULL
+    GROUP BY DATE_TRUNC('month', i."invoiceDate")
+  )
+  SELECT 
+    month,
+    total,
+    LAG(total) OVER (ORDER BY month) AS prev_month_total,
+    ROUND(((total - LAG(total) OVER (ORDER BY month)) / LAG(total) OVER (ORDER BY month) * 100)::numeric, 2) AS growth_rate
+  FROM monthly_totals
+  ORDER BY month
+
+RANKING / TOP N WITH TIES:
+- Use RANK() or DENSE_RANK() or ROW_NUMBER() OVER (ORDER BY column DESC)
+- Example: SELECT *, RANK() OVER (ORDER BY "invoiceTotal" DESC) AS rank FROM ...
+
+WINDOW FUNCTION GENERAL RULES:
+- Always use OVER clause with proper ORDER BY
+- Use PARTITION BY when grouping within windows
+- ROWS BETWEEN for frame specification
 - Always order window functions properly with ORDER BY inside OVER clause
 
 IMPORTANT DATA NOTES:
@@ -185,6 +225,22 @@ CUSTOMER/VENDOR AMOUNT QUERIES:
            GROUP BY c."customerName"
            ORDER BY total_amount DESC
            LIMIT 5;
+
+AGGREGATION WITH MULTIPLE TABLES:
+- When aggregating across multiple tables, use proper JOINs
+- Example multi-table aggregation:
+  SELECT 
+    v."vendorName",
+    COUNT(DISTINCT i.id) AS invoice_count,
+    SUM(s."invoiceTotal") AS total_amount,
+    AVG(s."invoiceTotal") AS avg_amount
+  FROM "vendors" v
+  JOIN "invoices" i ON v."documentId" = i."documentId"
+  JOIN "summaries" s ON i."documentId" = s."documentId"
+  WHERE i."invoiceDate" IS NOT NULL
+  GROUP BY v."vendorName"
+  HAVING COUNT(DISTINCT i.id) > 5
+  ORDER BY total_amount DESC;
 
 DATE COLUMNS:
 - "invoices"."invoiceDate" - invoice date (nullable)
@@ -256,8 +312,23 @@ For complex vendor risk queries with multiple conditions (declining volumes, inc
             return sql
             
         except Exception as e:
+            error_str = str(e)
             logger.error(f"❌ SQL generation with Groq failed: {e}", exc_info=True)
-            return None
+            
+            # Check for rate limit errors
+            if "429" in error_str or "rate_limit" in error_str.lower() or "Rate limit" in error_str:
+                # Extract rate limit details if available
+                if "Please try again in" in error_str:
+                    # Try to extract the wait time
+                    import re
+                    wait_match = re.search(r"Please try again in ([\d\.]+[smh])", error_str)
+                    wait_time = wait_match.group(1) if wait_match else "a few minutes"
+                    raise Exception(f"Groq API rate limit reached. Please try again in {wait_time}. You can upgrade your plan at https://console.groq.com/settings/billing")
+                else:
+                    raise Exception("Groq API rate limit reached. Please try again later or upgrade your plan at https://console.groq.com/settings/billing")
+            
+            # Re-raise other exceptions so they can be handled properly
+            raise
     
     def ask_question(self, question: str):
         """
@@ -268,7 +339,16 @@ For complex vendor risk queries with multiple conditions (declining volumes, inc
             logger.info(f"Processing question: {question}")
             
             # Generate SQL using Groq
-            sql = self._generate_sql_with_groq(question)
+            try:
+                sql = self._generate_sql_with_groq(question)
+            except Exception as e:
+                error_msg = str(e)
+                logger.error(f"SQL generation error: {error_msg}")
+                return {
+                    "success": False,
+                    "question": question,
+                    "error": error_msg
+                }
             
             if not sql:
                 logger.error("SQL generation failed")
@@ -337,10 +417,12 @@ For complex vendor risk queries with multiple conditions (declining volumes, inc
                 "error": None if sql else "Failed to generate SQL"
             }
         except Exception as e:
+            error_msg = str(e)
             logger.error(f"SQL generation failed: {e}", exc_info=True)
             return {
                 "success": False,
-                "error": str(e)
+                "question": question,
+                "error": error_msg
             }
 
 # Global instance
