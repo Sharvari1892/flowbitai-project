@@ -1,0 +1,113 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Document {
+  id             String   @id @default(uuid())
+  name           String
+  filePath       String
+  fileSize       BigInt
+  fileType       String
+  status         String
+  organizationId String
+  departmentId   String
+  createdAt      DateTime
+  updatedAt      DateTime
+  processedAt    DateTime?
+  analyticsId    String?
+  
+  invoice        Invoice?
+  vendor         Vendor?
+  customer       Customer?
+  payment        Payment?
+  summary        Summary?
+  lineItems      LineItem[]
+  
+  @@map("documents")
+}
+
+model Invoice {
+  id           String   @id @default(uuid())
+  documentId   String   @unique
+  document     Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  invoiceId    String?
+  invoiceDate  DateTime?
+  deliveryDate DateTime?
+  confidence   Float?
+  
+  @@map("invoices")
+}
+
+model Vendor {
+  id              String   @id @default(uuid())
+  documentId      String   @unique
+  document        Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  vendorName      String?
+  vendorAddress   String?
+  vendorTaxId     String?
+  confidence      Float?
+  
+  @@map("vendors")
+}
+
+model Customer {
+  id              String   @id @default(uuid())
+  documentId      String   @unique
+  document        Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  customerName    String?
+  customerAddress String?
+  customerTaxId   String?
+  confidence      Float?
+  
+  @@map("customers")
+}
+
+model Payment {
+  id                String   @id @default(uuid())
+  documentId        String   @unique
+  document          Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  dueDate           DateTime?
+  paymentTerms      String?
+  bankAccountNumber String?
+  netDays           Int?
+  discountPercentage Float?
+  confidence        Float?
+  
+  @@map("payments")
+}
+
+model Summary {
+  id             String   @id @default(uuid())
+  documentId     String   @unique
+  document       Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  subTotal       Float?
+  totalTax       Float?
+  invoiceTotal   Float?
+  documentType   String?
+  currencySymbol String?
+  confidence     Float?
+  
+  @@map("summaries")
+}
+
+model LineItem {
+  id          String   @id @default(uuid())
+  documentId  String
+  document    Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  srNo        Int?
+  description String?
+  quantity    Float?
+  unitPrice   Float?
+  amount      Float?
+  vatRate     Float?
+  vatAmount   Float?
+  confidence  Float?
+  
+  @@map("line_items")
+}

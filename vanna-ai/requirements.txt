@@ -1,0 +1,13 @@
+fastapi
+uvicorn[standard]
+python-dotenv
+psycopg[binary]
+sqlalchemy
+vanna
+groq
+pydantic
+pydantic-settings
+python-multipart
+httpx
+pandas
+plotly
