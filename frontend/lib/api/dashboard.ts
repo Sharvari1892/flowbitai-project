@@ -1,5 +1,3 @@
-const API_BASE = process.env.NEXT_PUBLIC_VANNA_API_URL || 'http://localhost:8000';
-
 // Overview Stats Types
 export interface OverviewStats {
   totalSpendYTD: number;
@@ -43,17 +41,11 @@ export interface CashFlowForecast {
 }
 
 class DashboardAPI {
-  private baseUrl: string;
-
-  constructor(baseUrl: string = API_BASE) {
-    this.baseUrl = baseUrl;
-  }
-
   /**
    * Get overview statistics
    */
   async getOverviewStats(): Promise<OverviewStats> {
-    const response = await fetch(`${this.baseUrl}/api/v1/dashboard/overview`);
+    const response = await fetch('/api/stats');
     if (!response.ok) {
       throw new Error('Failed to fetch overview stats');
     }
@@ -64,7 +56,7 @@ class DashboardAPI {
    * Get invoice volume and value trend
    */
   async getInvoiceTrend(months: number = 12): Promise<TrendDataPoint[]> {
-    const response = await fetch(`${this.baseUrl}/api/v1/dashboard/trend?months=${months}`);
+    const response = await fetch(`/api/invoice-trends?months=${months}`);
     if (!response.ok) {
       throw new Error('Failed to fetch invoice trend');
     }
@@ -75,7 +67,7 @@ class DashboardAPI {
    * Get top vendors by spend
    */
   async getTopVendors(limit: number = 10): Promise<VendorSpend[]> {
-    const response = await fetch(`${this.baseUrl}/api/v1/dashboard/vendors/top?limit=${limit}`);
+    const response = await fetch('/api/vendors/top10');
     if (!response.ok) {
       throw new Error('Failed to fetch top vendors');
     }
@@ -86,7 +78,7 @@ class DashboardAPI {
    * Get spend by category
    */
   async getSpendByCategory(): Promise<CategorySpend[]> {
-    const response = await fetch(`${this.baseUrl}/api/v1/dashboard/categories`);
+    const response = await fetch('/api/category-spend');
     if (!response.ok) {
       throw new Error('Failed to fetch category spend');
     }
@@ -97,7 +89,7 @@ class DashboardAPI {
    * Get cash flow forecast
    */
   async getCashFlowForecast(months: number = 6): Promise<CashFlowForecast[]> {
-    const response = await fetch(`${this.baseUrl}/api/v1/dashboard/cashflow?months=${months}`);
+    const response = await fetch(`/api/cash-outflow?months=${months}`);
     if (!response.ok) {
       throw new Error('Failed to fetch cash flow forecast');
     }
@@ -117,11 +109,11 @@ class DashboardAPI {
     const queryParams = new URLSearchParams();
     if (params?.search) queryParams.append('search', params.search);
     if (params?.status && params.status !== 'all') queryParams.append('status', params.status);
-    if (params?.sortBy) queryParams.append('sort_by', params.sortBy);
-    if (params?.sortOrder) queryParams.append('sort_order', params.sortOrder);
+    if (params?.sortBy) queryParams.append('sortBy', params.sortBy);
+    if (params?.sortOrder) queryParams.append('sortOrder', params.sortOrder);
     if (params?.limit) queryParams.append('limit', params.limit.toString());
 
-    const url = `${this.baseUrl}/api/v1/invoices?${queryParams.toString()}`;
+    const url = `/api/invoices?${queryParams.toString()}`;
     console.log('Fetching invoices from:', url);
     
     const response = await fetch(url);

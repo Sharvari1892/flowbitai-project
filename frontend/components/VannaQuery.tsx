@@ -477,61 +477,71 @@ export default function VannaQuery() {
                                 </span>
                               </CollapsibleTrigger>
                               <CollapsibleContent className="mt-2">
-                                <Card>
-                                  <CardHeader className="flex flex-row items-center justify-between">
-                                    <div className="flex-1">
-                                      {message.result.explanation && (
-                                        <p className="text-sm text-muted-foreground">{message.result.explanation}</p>
-                                      )}
+                                <Card className="border-2">
+                                  <CardHeader className="bg-muted/30 border-b">
+                                    <div className="flex items-center justify-between">
+                                      <div className="flex items-center gap-2">
+                                        <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                                          <Database className="h-4 w-4 text-primary" />
+                                        </div>
+                                        <div>
+                                          <h3 className="font-semibold text-sm">Query Results</h3>
+                                          <p className="text-xs text-muted-foreground">
+                                            {message.result.row_count || message.result.results.length} rows returned
+                                          </p>
+                                        </div>
+                                      </div>
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => message.result?.results && exportToCSV(message.result.results, `query-result-${Date.now()}.csv`)}
+                                        className="gap-2"
+                                      >
+                                        <Download className="h-4 w-4" />
+                                        Export CSV
+                                      </Button>
                                     </div>
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => message.result?.results && exportToCSV(message.result.results, `query-result-${Date.now()}.csv`)}
-                                      className="gap-2"
-                                    >
-                                      <Download className="h-4 w-4" />
-                                      Export CSV
-                                    </Button>
                                   </CardHeader>
-                                  <CardContent>
+                                  <CardContent className="p-6">
                                     {canGenerateChart(message.result.results) ? (
                                       <Tabs defaultValue="table" className="w-full">
-                                        <TabsList className="grid w-full grid-cols-4">
-                                          <TabsTrigger value="table">
-                                            <Database className="h-4 w-4 mr-2" />
-                                            Table
+                                        <TabsList className="grid w-full grid-cols-4 h-11 bg-muted/50">
+                                          <TabsTrigger value="table" className="gap-2">
+                                            <Database className="h-4 w-4" />
+                                            <span className="hidden sm:inline">Table</span>
                                           </TabsTrigger>
-                                          <TabsTrigger value="bar">
-                                            <BarChart3 className="h-4 w-4 mr-2" />
-                                            Bar Chart
+                                          <TabsTrigger value="bar" className="gap-2">
+                                            <BarChart3 className="h-4 w-4" />
+                                            <span className="hidden sm:inline">Bar Chart</span>
                                           </TabsTrigger>
-                                          <TabsTrigger value="line">
-                                            <LineChart className="h-4 w-4 mr-2" />
-                                            Line Chart
+                                          <TabsTrigger value="line" className="gap-2">
+                                            <LineChart className="h-4 w-4" />
+                                            <span className="hidden sm:inline">Line Chart</span>
                                           </TabsTrigger>
-                                          <TabsTrigger value="pie">
-                                            <PieChart className="h-4 w-4 mr-2" />
-                                            Pie Chart
+                                          <TabsTrigger value="pie" className="gap-2">
+                                            <PieChart className="h-4 w-4" />
+                                            <span className="hidden sm:inline">Pie Chart</span>
                                           </TabsTrigger>
                                         </TabsList>
                                         
-                                        <TabsContent value="table" className="mt-4">
-                                          <div className="rounded-lg border overflow-hidden">
-                                            <div className="overflow-x-auto">
+                                        <TabsContent value="table" className="mt-6">
+                                          <div className="rounded-lg border-2 overflow-hidden shadow-sm">
+                                            <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
                                               <Table>
-                                                <TableHeader>
-                                                  <TableRow className="bg-muted/50">
+                                                <TableHeader className="sticky top-0 bg-muted/80 backdrop-blur-sm">
+                                                  <TableRow>
                                                     {Object.keys(message.result.results[0]).map((key) => (
-                                                      <TableHead key={key} className="font-semibold">{key}</TableHead>
+                                                      <TableHead key={key} className="font-bold text-foreground border-r last:border-r-0">
+                                                        {key}
+                                                      </TableHead>
                                                     ))}
                                                   </TableRow>
                                                 </TableHeader>
                                                 <TableBody>
                                                   {message.result.results.map((row, idx) => (
-                                                    <TableRow key={idx}>
+                                                    <TableRow key={idx} className="hover:bg-muted/50 transition-colors">
                                                       {Object.values(row).map((value, cellIdx) => (
-                                                        <TableCell key={cellIdx} className="font-mono text-sm">
+                                                        <TableCell key={cellIdx} className="font-mono text-sm border-r last:border-r-0">
                                                           {value !== null && value !== undefined ? String(value) : (
                                                             <span className="text-muted-foreground italic">NULL</span>
                                                           )}
@@ -545,39 +555,44 @@ export default function VannaQuery() {
                                           </div>
                                         </TabsContent>
 
-                                        <TabsContent value="bar" className="mt-4">
-                                          <ResponsiveContainer width="100%" height={400}>
-                                            <BarChart data={message.result.results}>
-                                              <CartesianGrid strokeDasharray="3 3" />
-                                              <XAxis dataKey={Object.keys(message.result.results[0])[0]} />
-                                              <YAxis />
-                                              <Tooltip />
-                                              <Legend />
-                                              {Object.keys(message.result.results[0]).slice(1).map((key, idx) => (
-                                                <Bar key={key} dataKey={key} fill={CHART_COLORS[idx % CHART_COLORS.length]} />
-                                              ))}
-                                            </BarChart>
-                                          </ResponsiveContainer>
+                                        <TabsContent value="bar" className="mt-6">
+                                          <div className="rounded-lg border-2 p-4 bg-muted/20">
+                                            <ResponsiveContainer width="100%" height={400}>
+                                              <BarChart data={message.result.results}>
+                                                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                                                <XAxis dataKey={Object.keys(message.result.results[0])[0]} />
+                                                <YAxis />
+                                                <Tooltip />
+                                                <Legend />
+                                                {Object.keys(message.result.results[0]).slice(1).map((key, idx) => (
+                                                  <Bar key={key} dataKey={key} fill={CHART_COLORS[idx % CHART_COLORS.length]} radius={[8, 8, 0, 0]} />
+                                                ))}
+                                              </BarChart>
+                                            </ResponsiveContainer>
+                                          </div>
                                         </TabsContent>
 
-                                        <TabsContent value="line" className="mt-4">
-                                          <ResponsiveContainer width="100%" height={400}>
-                                            <RechartsLineChart data={message.result.results}>
-                                              <CartesianGrid strokeDasharray="3 3" />
-                                              <XAxis dataKey={Object.keys(message.result.results[0])[0]} />
-                                              <YAxis />
-                                              <Tooltip />
-                                              <Legend />
-                                              {Object.keys(message.result.results[0]).slice(1).map((key, idx) => (
-                                                <Line key={key} type="monotone" dataKey={key} stroke={CHART_COLORS[idx % CHART_COLORS.length]} />
-                                              ))}
-                                            </RechartsLineChart>
-                                          </ResponsiveContainer>
+                                        <TabsContent value="line" className="mt-6">
+                                          <div className="rounded-lg border-2 p-4 bg-muted/20">
+                                            <ResponsiveContainer width="100%" height={400}>
+                                              <RechartsLineChart data={message.result.results}>
+                                                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                                                <XAxis dataKey={Object.keys(message.result.results[0])[0]} />
+                                                <YAxis />
+                                                <Tooltip />
+                                                <Legend />
+                                                {Object.keys(message.result.results[0]).slice(1).map((key, idx) => (
+                                                  <Line key={key} type="monotone" dataKey={key} stroke={CHART_COLORS[idx % CHART_COLORS.length]} strokeWidth={2} />
+                                                ))}
+                                              </RechartsLineChart>
+                                            </ResponsiveContainer>
+                                          </div>
                                         </TabsContent>
 
-                                        <TabsContent value="pie" className="mt-4">
-                                          <ResponsiveContainer width="100%" height={400}>
-                                            <RechartsPieChart>
+                                        <TabsContent value="pie" className="mt-6">
+                                          <div className="rounded-lg border-2 p-4 bg-muted/20">
+                                            <ResponsiveContainer width="100%" height={400}>
+                                              <RechartsPieChart>
                                               <Pie
                                                 data={message.result.results.slice(0, 8)}
                                                 cx="50%"
@@ -597,24 +612,25 @@ export default function VannaQuery() {
                                               <Legend />
                                             </RechartsPieChart>
                                           </ResponsiveContainer>
+                                          </div>
                                         </TabsContent>
                                       </Tabs>
                                     ) : (
-                                      <div className="rounded-lg border overflow-hidden">
-                                        <div className="overflow-x-auto">
+                                      <div className="rounded-lg border-2 overflow-hidden shadow-sm">
+                                        <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
                                           <Table>
-                                            <TableHeader>
-                                              <TableRow className="bg-muted/50">
+                                            <TableHeader className="sticky top-0 bg-muted/80 backdrop-blur-sm">
+                                              <TableRow>
                                                 {Object.keys(message.result.results[0]).map((key) => (
-                                                  <TableHead key={key} className="font-semibold">{key}</TableHead>
+                                                  <TableHead key={key} className="font-bold text-foreground border-r last:border-r-0">{key}</TableHead>
                                                 ))}
                                               </TableRow>
                                             </TableHeader>
                                             <TableBody>
                                               {message.result.results.map((row, idx) => (
-                                                <TableRow key={idx}>
+                                                <TableRow key={idx} className="hover:bg-muted/50 transition-colors">
                                                   {Object.values(row).map((value, cellIdx) => (
-                                                    <TableCell key={cellIdx} className="font-mono text-sm">
+                                                    <TableCell key={cellIdx} className="font-mono text-sm border-r last:border-r-0">
                                                       {value !== null && value !== undefined ? String(value) : (
                                                         <span className="text-muted-foreground italic">NULL</span>
                                                       )}

@@ -25,6 +25,7 @@ const CustomTooltip = ({ active, payload }: any) => {
 export function InvoiceTrendChart() {
   const [data, setData] = useState<TrendDataPoint[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     loadData();
@@ -32,10 +33,14 @@ export function InvoiceTrendChart() {
 
   const loadData = async () => {
     try {
+      console.log('Loading invoice trend data...');
       const trendData = await dashboardAPI.getInvoiceTrend(12);
-      setData(trendData);
+      console.log('Invoice trend data received:', trendData);
+      setData(trendData || []);
+      setError(null);
     } catch (error) {
       console.error('Failed to load trend data:', error);
+      setError(error instanceof Error ? error.message : 'Failed to load data');
     } finally {
       setLoading(false);
     }
@@ -50,6 +55,17 @@ export function InvoiceTrendChart() {
       <CardContent>
         {loading ? (
           <Skeleton className="h-[300px] w-full" />
+        ) : error ? (
+          <div className="h-[300px] flex items-center justify-center">
+            <div className="text-center">
+              <p className="text-destructive font-semibold mb-2">Error loading chart</p>
+              <p className="text-sm text-muted-foreground">{error}</p>
+            </div>
+          </div>
+        ) : data.length === 0 ? (
+          <div className="h-[300px] flex items-center justify-center">
+            <p className="text-muted-foreground">No trend data available</p>
+          </div>
         ) : (
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={data}>

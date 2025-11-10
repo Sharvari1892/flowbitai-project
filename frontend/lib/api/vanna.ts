@@ -36,7 +36,7 @@ export class VannaAPI {
   }
 
   /**
-   * Check API health status
+   * Check API health status (direct to Vanna backend)
    */
   async checkHealth(): Promise<HealthResponse> {
     const response = await fetch(`${this.baseUrl}/api/v1/health`);
@@ -47,7 +47,7 @@ export class VannaAPI {
   }
 
   /**
-   * Train Vanna AI on database schema
+   * Train Vanna AI on database schema (direct to Vanna backend)
    */
   async train(): Promise<TrainingResponse> {
     const response = await fetch(`${this.baseUrl}/api/v1/train`, {
@@ -66,10 +66,10 @@ export class VannaAPI {
   }
 
   /**
-   * Ask a question and optionally execute it
+   * Ask a question and optionally execute it (via frontend API route)
    */
   async ask(question: string, execute: boolean = true): Promise<QueryResult> {
-    const response = await fetch(`${this.baseUrl}/api/v1/ask`, {
+    const response = await fetch('/api/chat-with-data', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -79,14 +79,14 @@ export class VannaAPI {
     
     if (!response.ok) {
       const error = await response.json();
-      throw new Error(error.detail || 'Query failed');
+      throw new Error(error.error || 'Query failed');
     }
     
     return response.json();
   }
 
   /**
-   * Generate SQL without executing
+   * Generate SQL without executing (direct to Vanna backend)
    */
   async generateSQL(question: string): Promise<QueryResult> {
     const response = await fetch(`${this.baseUrl}/api/v1/generate-sql`, {
