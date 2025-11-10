@@ -47,7 +47,7 @@ export default function Navbar() {
                 variant={isActive('/query') ? 'default' : 'ghost'}
                 asChild
               >
-                <Link href="/query">Query AI</Link>
+                <Link href="/query">Chat with Data</Link>
               </Button>
               <Button 
                 variant={isActive('/about') ? 'default' : 'ghost'}

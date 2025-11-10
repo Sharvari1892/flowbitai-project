@@ -46,6 +46,11 @@ const data = {
       icon: IconDashboard,
     },
     {
+      title: "Chat with Data",
+      url: "/query",
+      icon: IconFileAi,
+    },
+    {
       title: "Invoice",
       url: "#",
       icon: IconFileDescription,
